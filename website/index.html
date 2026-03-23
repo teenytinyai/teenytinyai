@@ -563,7 +563,8 @@
         }
       }
     </style>
-    <script defer data-domain="teenytiny.ai" src="https://plausible.io/js/script.js"></script>
+    <script defer data-domain="teenytiny.ai" src="https://plausible.io/js/script.tagged-events.js"></script>
+    <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
   </head>
   <body>
     <!-- Hero Section -->
@@ -965,7 +966,7 @@
     <footer>
       <div class="container">
         <div class="footer-content">
-          <a href="https://github.com/teenytinyai/teenytinyai/">GitHub</a> |
+          <a href="https://github.com/teenytinyai/teenytinyai/" onclick="plausible('Outbound: GitHub')">GitHub</a> |
           Built by <a href="https://x.com/joewalnes">@joewalnes</a
           ><span class="footer-break"
             ><br />for fun, not for world domination. Hopefully.</span
@@ -1012,6 +1013,7 @@
       function changeModel() {
         const select = document.getElementById("modelSelect");
         currentModel = select.value;
+        plausible("Model Switched", { props: { model: currentModel } });
 
         // Clear chat and conversation history
         const chatMessages = document.getElementById("chatMessages");
@@ -1039,6 +1041,14 @@
           chatMessages.scrollTop = chatMessages.scrollHeight;
 
           conversationHistory.push({ role: "user", content: userMessage });
+
+          // Track chat engagement
+          if (firstMessage) {
+            plausible("Chat Message Sent", { props: { model: currentModel } });
+          }
+          if (conversationHistory.filter(m => m.role === "user").length === 3) {
+            plausible("Chat Multi-Turn", { props: { model: currentModel } });
+          }
 
           // Clear input
           if (firstMessage) {
@@ -1117,6 +1127,7 @@
           content.style.justifyContent = "flex-start";
           content.style.textAlign = "left";
           content.innerHTML = `TEENYTINY_API_KEY=${apiKey}`;
+          plausible("API Key Generated");
         } catch (error) {
           content.innerHTML = "Error generating API key. Please try again.";
           console.error("API key generation failed:", error);
@@ -1353,6 +1364,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         const select = document.getElementById("languageSelect");
         const codeExample = document.getElementById("codeExample");
         codeExample.textContent = codeExamples[select.value];
+        plausible("Code Language Changed", { props: { language: select.value } });
       }
     </script>
   </body>
