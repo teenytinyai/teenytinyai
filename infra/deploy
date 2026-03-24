@@ -56,6 +56,8 @@ DOMAIN=$(yq eval ".environments.$ENVIRONMENT.domain" "$ENV_CONFIG")
 WORKER_NAME=$(yq eval ".environments.$ENVIRONMENT.worker_name" "$ENV_CONFIG")
 ZONE_NAME=$(yq eval ".environments.$ENVIRONMENT.zone_name" "$ENV_CONFIG")
 CLOUDFLARE_ACCOUNT_ID=$(yq eval ".environments.$ENVIRONMENT.cloudflare_account_id" "$ENV_CONFIG")
+MPP_TESTNET=$(yq eval ".environments.$ENVIRONMENT.mpp.testnet // \"false\"" "$ENV_CONFIG")
+MPP_PRICE=$(yq eval ".environments.$ENVIRONMENT.mpp.price // \"0.001\"" "$ENV_CONFIG")
 
 # Check if environment exists
 if [ "$DOMAIN" = "null" ]; then
@@ -70,6 +72,8 @@ echo "  Domain: $DOMAIN"
 echo "  Worker: $WORKER_NAME"
 echo "  Zone: $ZONE_NAME"
 echo "  Account: $CLOUDFLARE_ACCOUNT_ID"
+echo "  MPP Testnet: $MPP_TESTNET"
+echo "  MPP Price: $MPP_PRICE"
 echo ""
 
 # Load .env file
@@ -170,6 +174,30 @@ npx wrangler deploy \
     --route "$DOMAIN/site/*" \
     --compatibility-date "2024-11-01" \
     --env=""
+
+# Step 5.0.1: Upload Worker secrets (API_KEY + MPP)
+echo -e "${BLUE}🔐 Uploading Worker secrets...${NC}"
+
+# Build secrets JSON — always includes API_KEY, adds MPP secrets if configured
+SECRETS_JSON="{"
+if [ -n "$API_KEY" ] && [ "$API_KEY" != "your-api-key" ]; then
+    SECRETS_JSON="$SECRETS_JSON\"API_KEY\":\"$API_KEY\""
+fi
+
+if [ -n "$MPP_PAY_TO" ] && [ "$MPP_PAY_TO" != "0xYourWalletAddress" ]; then
+    [ "$SECRETS_JSON" != "{" ] && SECRETS_JSON="$SECRETS_JSON,"
+    SECRETS_JSON="$SECRETS_JSON\"MPP_PAY_TO\":\"$MPP_PAY_TO\""
+    SECRETS_JSON="$SECRETS_JSON,\"MPP_SECRET_KEY\":\"$MPP_SECRET_KEY\""
+    SECRETS_JSON="$SECRETS_JSON,\"MPP_TESTNET\":\"$MPP_TESTNET\""
+    SECRETS_JSON="$SECRETS_JSON,\"MPP_PRICE\":\"$MPP_PRICE\""
+    echo -e "${GREEN}  MPP enabled (testnet=$MPP_TESTNET, price=$MPP_PRICE)${NC}"
+else
+    echo -e "${YELLOW}  MPP not configured (set MPP_PAY_TO in .env to enable)${NC}"
+fi
+SECRETS_JSON="$SECRETS_JSON}"
+
+echo "$SECRETS_JSON" | npx wrangler secret bulk --name "$WORKER_NAME"
+echo -e "${GREEN}✅ Secrets uploaded${NC}"
 
 # Step 5.1: Deploy Pages project
 echo -e "${BLUE}🌐 Deploying Pages website...${NC}"

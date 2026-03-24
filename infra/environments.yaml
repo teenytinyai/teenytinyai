@@ -7,6 +7,9 @@ environments:
     cloudflare_account_id: "74200eae33313459882c57f6ae0fbe2e"
     zone_name: "teenytiny.ai"
     worker_name: "teenytiny-api"
+    mpp:
+      testnet: false
+      price: "0.001"
 
   qa:
     domain: "qa.teenytiny.ai"
@@ -14,4 +17,7 @@ environments:
     cloudflare_account_id: "74200eae33313459882c57f6ae0fbe2e"
     zone_name: "teenytiny.ai"
     worker_name: "teenytiny-api-qa"
+    mpp:
+      testnet: true
+      price: "0.001"
 

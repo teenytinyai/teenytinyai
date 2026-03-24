@@ -79,6 +79,15 @@ else
     echo -e "${BLUE}ℹ️  Using default worker API key${NC}"
 fi
 
+# Check if MPP is configured for this environment
+MPP_ENABLED=$(yq eval ".environments.$ENVIRONMENT.mpp // \"\"" "$ENV_CONFIG")
+if [ -n "$MPP_ENABLED" ] && [ "$MPP_ENABLED" != "null" ] && [ -n "$MPP_PAY_TO" ] && [ "$MPP_PAY_TO" != "0xYourWalletAddress" ]; then
+    HAS_MPP=true
+    echo -e "${BLUE}ℹ️  MPP is enabled for this environment${NC}"
+else
+    HAS_MPP=false
+fi
+
 # Test counters
 TESTS_PASSED=0
 TESTS_TOTAL=0
@@ -191,20 +200,37 @@ test_http "Health endpoint (/health) returns 200 and JSON" \
     "application/json" \
     "teenytiny-api"
 
-# Test 4: Models without auth returns 401 and JSON
-test_http "Models endpoint (/v1/models) without auth returns 401" \
-    "$BASE_URL/v1/models" \
-    "401" \
-    "application/json" \
-    "error"
+# Test 4: Models without auth returns 401 (no MPP) or 402 (with MPP)
+if $HAS_MPP; then
+    test_http "Models endpoint (/v1/models) without auth returns 402 (MPP challenge)" \
+        "$BASE_URL/v1/models" \
+        "402" \
+        "" \
+        ""
+else
+    test_http "Models endpoint (/v1/models) without auth returns 401" \
+        "$BASE_URL/v1/models" \
+        "401" \
+        "application/json" \
+        "error"
+fi
 
-# Test 5: Models with bad API key returns 401 and JSON
-test_http "Models endpoint (/v1/models) with bad API key returns 401" \
-    "$BASE_URL/v1/models" \
-    "401" \
-    "application/json" \
-    "error" \
-    "Authorization: Bearer bad-key-123"
+# Test 5: Models with bad API key returns 401 (no MPP) or 402 (with MPP, falls through to payment)
+if $HAS_MPP; then
+    test_http "Models endpoint (/v1/models) with bad API key returns 402 (MPP challenge)" \
+        "$BASE_URL/v1/models" \
+        "402" \
+        "" \
+        "" \
+        "Authorization: Bearer bad-key-123"
+else
+    test_http "Models endpoint (/v1/models) with bad API key returns 401" \
+        "$BASE_URL/v1/models" \
+        "401" \
+        "application/json" \
+        "error" \
+        "Authorization: Bearer bad-key-123"
+fi
 
 # Test 6: Models with auth returns 200 and JSON
 test_http "Models endpoint (/v1/models) with auth returns 200 and JSON" \
