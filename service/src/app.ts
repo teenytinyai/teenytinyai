@@ -17,6 +17,7 @@ import { ElizaModel } from "./models/eliza-model.js";
 import { ParryModel } from "./models/parry-model.js";
 import { RacterModel } from "./models/racter-model.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
+import { createMppAuthMiddleware } from "./middleware/mpp.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { createLoggingMiddleware } from "./middleware/logging.js";
 import { createErrorHandler } from "./middleware/errors.js";
@@ -64,7 +65,12 @@ export function createApp(config: AppConfig) {
   app.use("*", createLoggingMiddleware());
 
   // Auth middleware (only for API routes)
-  app.use("/v1/*", createAuthMiddleware(authenticator));
+  // If MPP is configured, use combined auth that accepts either Bearer tokens or MPP payments
+  if (config.auth.mpp) {
+    app.use("/v1/*", createMppAuthMiddleware(authenticator, config.auth.mpp));
+  } else {
+    app.use("/v1/*", createAuthMiddleware(authenticator));
+  }
 
   // Error handler
   app.onError(createErrorHandler());

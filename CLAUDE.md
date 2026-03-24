@@ -115,4 +115,11 @@ src/
 - No hardcoded secrets in code
 - Proper CORS handling for browser requests
 
+**MPP (Machine Payments Protocol)**:
+- MPP is configured via environment variables (MPP_PAY_TO, MPP_SECRET_KEY, etc.) and wired through AuthConfig
+- The mppx SDK is used for Hono middleware integration — lazy-initialized to avoid startup cost when MPP is disabled
+- Auth middleware pattern: check Bearer token first, fall through to MPP payment if no valid Bearer
+- When adding new auth methods, use the same fallback pattern — valid Bearer always takes priority
+- The 402 challenge flow is stateless (HMAC-bound challenge IDs) — no database needed for payment verification
+
 - Git commit messages should describe the final state of the commit, not all the steps we took along the way

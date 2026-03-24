@@ -53,6 +53,68 @@ export TEENYTINY_API_KEY=your-api-key
 ./tt echo "Hello from the cloud"
 ```
 
+## Pay-per-request with MPP
+
+TeenyTiny AI supports the [Machine Payments Protocol (MPP)](https://mpp.dev) as an alternative to API keys. When enabled, clients can pay per-request using [Tempo](https://tempo.xyz) stablecoins instead of needing an API key upfront.
+
+API key authentication continues to work alongside MPP - existing integrations are unaffected.
+
+### How it works
+
+1. Client sends a request without an API key
+2. Server responds `402 Payment Required` with a `WWW-Authenticate: Payment` challenge
+3. Client pays (a fraction of a penny!) and retries with an `Authorization: Payment` credential
+4. Server verifies payment and returns the response with a `Payment-Receipt` header
+
+### Enable MPP on your server
+
+Set these environment variables:
+
+```bash
+export MPP_PAY_TO=0xYourWalletAddress      # Your recipient wallet
+export MPP_SECRET_KEY=your-secret-key       # Secret for challenge signing
+export MPP_TESTNET=true                     # Use Tempo testnet (free!)
+export MPP_PRICE=0.001                      # Price per request in USD (default: $0.001)
+
+npm run dev
+```
+
+### Try it with purl
+
+[purl](https://github.com/stripe/purl) is a curl-like CLI that handles MPP payments automatically.
+
+```bash
+# Install purl
+brew install stripe/purl/purl
+
+# Set up a wallet
+purl wallet add
+```
+
+**Testnet** (free, for testing):
+
+```bash
+purl http://localhost:8080/v1/chat/completions \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"model": "eliza", "messages": [{"role": "user", "content": "I feel curious about machine payments"}]}'
+```
+
+**Mainnet** (real money, fractions of a penny):
+
+```bash
+purl https://teenytiny.ai/v1/chat/completions \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"model": "parry", "messages": [{"role": "user", "content": "Tell me about the conspiracy"}]}'
+```
+
+Use `purl --dry-run <url>` to preview the cost without paying, or `purl inspect <url>` to see payment requirements.
+
+### Pricing
+
+Default: **$0.001 per request** (one tenth of a cent). Configure with `MPP_PRICE`.
+
+At this price, $1 buys you 1,000 API calls. It's meant to be fun and nearly free.
+
 ---
 
-Built with ❤️ for the developer community. Questions? Open an issue on [GitHub](https://github.com/teenytinyai/teenytiny-api).
+Built with love for the developer community. Questions? Open an issue on [GitHub](https://github.com/teenytinyai/teenytiny-api).
